@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+		html, body {
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			padding: 0;
+		}
+		body {
+			background-color: #000000;
+		}
+				
+		#screen {
+			height: 100%;
+			margin-left: auto;
+			margin-right: auto;
+			display: block;
+		}
+	</style>
+</head>
+<body>
+    <canvas id="screen" height="480px" width="640px"></canvas>
+    <script>
+        if ( !window.requestAnimationFrame ) {
+
+            window.requestAnimationFrame = (function() {
+                return window.webkitRequestAnimationFrame ||
+                window.mozRequestAnimationFrame ||
+                window.oRequestAnimationFrame ||
+                window.msRequestAnimationFrame ||
+                function( /* function FrameRequestCallback */ callback, /* DOMElement Element */ element ) {
+                    window.setTimeout( callback, 1000 / 60 );
+                };
+            })();
+        }
+
+        var game = (function() {
+
+            //game state
+            var game = {};
+
+            game.assetFolder = "assets/";
+            game.imageFolder = game.assetFolder + "images/";
+
+            game.speed = 20;
+
+            game.level = {
+                background: [
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+                    [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+                    [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+                    [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+                    [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+                    [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+                    [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                ],
+                walls: [
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 8, 3, 3, 3, 3, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 5, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 5, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 5, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 5, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 5, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 7, 6, 6, 6, 6, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                ],
+                backgroundTiles: {
+                    0: { file: "blank.png", travelMode: 1 },
+                    1: { file: "carpet.png", travelMode: 1 },
+                    2: { file: "wall-back-corner.png", travelMode: 1 },
+                    3: { file: "wall-back-left.png", travelMode: 1 },
+                    4: { file: "wall-back-right.png", travelMode: 1 },
+                    5: { file: "wall-front-left.png", travelMode: 1 },
+                    6: { file: "wall-front-right.png", travelMode: 1 },
+                    7: { file: "wall-front-corner.png", travelMode: 1 },
+                    8: { file: "wall-left-corner.png", travelMode: 1 },
+                    9: { file: "wall-right-corner.png", travelMode: 1 }
+                },
+                backgroundTileWidth: 64,
+                backgroundTileHeight: 32,
+                screenZeroOffset: {
+                    x: 0,
+                    y: 150
+                }
+            };
+
+            game.loadLevel = function(levelFile) {
+                //load a json level object from file and set it as game.level.
+
+                //set other properties based on level
+                
+                game.loadLevelImages();
+            }
+
+            game.loadLevelImages = function() {
+                for(var key in game.level.backgroundTiles) {
+                    var tile = game.level.backgroundTiles[key];
+                    tile.imageObject =  document.createElement('img');
+                    tile.imageObject.width = tile.width;
+                    tile.imageObject.height = tile.height;
+                    tile.imageObject.src = game.imageFolder + tile.file;
+                }
+            }
+
+            game.screenId = "screen";
+
+            game.init = function() {
+                game.screen = document.getElementById(game.screenId);
+                game.ctx = game.screen.getContext("2d");
+
+                game.ctx.imageSmoothingEnabled = false;
+
+                game.loadLevel();
+
+                setInterval(game.updateLoop, game.speed);
+            }
+
+            game.render = function() {
+                requestAnimationFrame(game.render.bind(game));
+
+                //clear play area
+                game.ctx.clearRect(0, 0, game.screen.width, game.screen.height);
+
+                //render background
+                for(var y=0; y<game.level.background.length; y++) {
+                    for(var x=game.level.background[y].length; x>=0; x--) {
+                        if(game.level.background[y][x] >= 0) {
+                            var tile = game.level.backgroundTiles[game.level.background[y][x]];
+                            var location = game.fromGameToViewSpace(x, y);
+                            game.ctx.drawImage(tile.imageObject, location.x, location.y);
+                        }
+                    }
+                }
+                //render walls
+                for(var y=0; y<game.level.walls.length; y++) {
+                    for(var x=game.level.walls[y].length; x>=0; x--) {
+                        if(game.level.walls[y][x] > 0) {
+                            var tile = game.level.backgroundTiles[game.level.walls[y][x]];
+                            var location = game.fromGameToViewSpace(x, y);
+                            game.ctx.drawImage(tile.imageObject, location.x, location.y);
+                        }
+                    }
+                }
+            }
+
+            game.fromGameToViewSpace = function(x,y) {    
+                var screenX = (x * game.level.backgroundTileWidth  / 2) + (y * game.level.backgroundTileWidth  / 2) + game.level.screenZeroOffset.x;
+                var screenY = (y * game.level.backgroundTileHeight / 2) - (x * game.level.backgroundTileHeight / 2) + game.level.screenZeroOffset.y;
+                //console.log(x + "," + y + " | " + screenX + "," + screenY);
+                return {
+                    x: screenX,
+                    y: screenY
+                };
+            }
+
+            game.fromViewToGameSpace = function(x,y) {
+
+            }
+
+            game.updateLoop = function() {
+                
+            }
+
+            game.addControls = function() {
+                //add keyboard events
+            }
+
+            //private methods
+            
+
+            //public methods
+            var myGame = {};
+        
+            myGame.start = function() {
+                game.addControls();
+                game.render();
+            }
+            
+            game.init();
+            myGame.start();
+
+            return myGame;
+        })();
+    </script>
+</body>
+</html>
